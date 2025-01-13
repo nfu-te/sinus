@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkylator med Ljud och Felmeddelanden</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+ 
+        .container {
+            width: 600px;
+            height: 580px;
+            background-color: green;
+            border: 15px solid tomato;
+            border-radius: 20px;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+ 
+        .display {
+            width: 100%;
+            height: 50px;
+            background-color: bisque;
+            color: blue;
+            font-weight: bold;
+            font-size: 1.5em;
+            border: 5px solid yellow;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: right;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+ 
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+ 
+        .button {
+            padding: 15px;
+            font-size: 1.2em;
+            background-color: tomato;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px;
+            border: 5px solid yellow;
+            cursor: pointer;
+        }
+ 
+        .button:hover {
+            background-color: darkred;
+        }
+ 
+        .button.operator {
+            background-color: darkorange;
+        }
+ 
+        .button.operator:hover {
+            background-color: orangered;
+        }
+ 
+        .error-message {
+            color: red;
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <input type="text" id="display" class="display" readonly>
+        <div class="buttons">
+            <button class="button" onclick="appendNumber('7')">7</button>
+            <button class="button" onclick="appendNumber('8')">8</button>
+            <button class="button" onclick="appendNumber('9')">9</button>
+            <button class="button operator" onclick="appendOperator('/')">/</button>
+           
+            <button class="button" onclick="appendNumber('4')">4</button>
+            <button class="button" onclick="appendNumber('5')">5</button>
+            <button class="button" onclick="appendNumber('6')">6</button>
+            <button class="button operator" onclick="appendOperator('*')">*</button>
+           
+            <button class="button" onclick="appendNumber('1')">1</button>
+            <button class="button" onclick="appendNumber('2')">2</button>
+            <button class="button" onclick="appendNumber('3')">3</button>
+            <button class="button operator" onclick="appendOperator('-')">-</button>
+           
+            <button class="button" onclick="appendNumber('0')">0</button>
+            <button class="button" onclick="calculateSin()">sin</button>
+            <button class="button" onclick="calculateCos()">cos</button>
+            <button class="button operator" onclick="appendOperator('+')">+</button>
+           
+            <button class="button" style="grid-column: span 2;" onclick="clearDisplay()">C</button>
+            <button class="button" style="grid-column: span 2;" onclick="calculate()">=</button>
+        </div>
+    </div>
+ 
+    <script>
+        let expression = "";
+ 
+        // Standardljud (knapptryckning)
+        function playStandardSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+           
+            oscillator.type = "sine"; // Ljudvågtyp: sine (mjukare ljud)
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime); // Standardfrekvens (400 Hz)
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+           
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01); // Fade in
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1); // Fade out
+ 
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1); // Spela ljudet i 0.1 sekunder
+        }
+ 
+        // Arg ljudeffekt (vid felmeddelande)
+        function playAngrySound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+           
+            oscillator.type = "square"; // Ljudvågtyp: square (skarpt ljud)
+            oscillator.frequency.setValueAtTime(1500, audioContext.currentTime); // Hög frekvens (1500 Hz)
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+           
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01); // Fade in
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1); // Fade out
+ 
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1); // Spela ljudet i 0.1 sekunder
+        }
+ 
+        // Uppdaterar displayen
+        function updateDisplay() {
+            document.getElementById("display").value = expression;
+        }
+ 
+        // Visa felmeddelande i displayen och spela argt ljud
+        function showError(message) {
+            playAngrySound();  // Spela argt ljud vid fel
+            expression = message; // Visa felmeddelandet på displayen
+            updateDisplay();
+            setTimeout(() => {
+                expression = ""; // Töm displayen efter 3 sekunder
+                updateDisplay();
+            }, 3000);
+        }
+ 
+        // Lägger till siffror till uttrycket
+        function appendNumber(number) {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            expression += number;
+            updateDisplay();
+        }
+ 
+        // Lägger till operatorer till uttrycket
+        function appendOperator(operator) {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            expression += " " + operator + " ";
+            updateDisplay();
+        }
+ 
+        // Beräknar sinus av uttrycket
+        function calculateSin() {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            const angle = parseFloat(expression);
+            if (isNaN(angle) || angle > 45 || angle < 0) {
+                showError("Fel: 0 <= vinkel <= 45");
+                return;
+            }
+            const result = Math.sin(angle * Math.PI / 180);
+            expression = result.toFixed(5).toString();
+            updateDisplay();
+        }
+ 
+        // Beräknar cosinus av uttrycket
+        function calculateCos() {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            const angle = parseFloat(expression);
+            if (isNaN(angle) || angle > 45 || angle < 0) {
+                showError("Fel: 0 <= vinkel <= 45");
+                return;
+            }
+            const result = Math.cos(angle * Math.PI / 180);
+            expression = result.toFixed(5).toString();
+            updateDisplay();
+        }
+ 
+        // Rensar displayen
+        function clearDisplay() {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            expression = "";
+            updateDisplay();
+        }
+ 
+        // Beräknar resultatet av uttrycket
+        function calculate() {
+            playStandardSound();  // Spela standardljud vid knapptryckning
+            try {
+                const result = eval(expression);
+                expression = result.toString();
+            } catch (error) {
+                showError("Fel: Ogiltigt uttryck");
+            }
+            updateDisplay();
+        }
+    </script>
+</body>
+</html>
